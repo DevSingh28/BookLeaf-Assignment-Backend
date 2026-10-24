@@ -11,11 +11,13 @@ This project was developed as a full-stack assignment to build an Author Support
 The application uses React and Vite for the frontend, Node.js and Express for the backend, PostgreSQL for data storage, and the Groq API for AI-assisted functionality.
 
 The implementation focuses on the core requirements of the assignment, including authentication, ticket management, administrator workflows, internal notes, and AI-assisted support operations.
+
 ## Table of Contents
 
 - [Live Demo](#live-demo)
 - [GitHub Repositories](#github-repositories)
-- [Project Overview](#project-overview)
+- [Project Overview](#project-overview-1)
+- [Quick Start: Demo Login Credentials](#quick-start-demo-login-credentials)
 - [Key Features](#key-features)
 - [Technology Stack](#technology-stack)
 - [Application Architecture](#application-architecture)
@@ -23,6 +25,8 @@ The implementation focuses on the core requirements of the assignment, including
 - [Ticket Classification](#ticket-classification)
 - [Installation and Setup](#installation-and-setup)
 - [Environment Variables](#environment-variables)
+- [Database Setup and Scripts](#database-setup-and-scripts)
+- [Login Credentials and Registration Steps](#login-credentials-and-registration-steps)
 - [Running the Application](#running-the-application)
 - [Deployment](#deployment)
 - [API Overview](#api-overview)
@@ -45,6 +49,8 @@ The frontend is deployed on Netlify, while the backend API is deployed on Render
 The application uses PostgreSQL hosted on Render for persistent data storage.
 
 > Note: The backend URL is the API service endpoint. Individual API endpoints depend on the routes implemented by the backend.
+
+> Note: The backend is hosted on a Render service that may take a short time to wake up on the first request after a period of inactivity. If the first login or API call is slow, please wait a few seconds and try again.
 
 ## GitHub Repositories
 
@@ -76,6 +82,32 @@ The application combines a traditional support-ticket workflow with AI assistanc
 - Support human review and editing of AI-generated drafts.
 - Protect ticket data through authentication and authorization.
 - Deploy the frontend and backend as independently managed services.
+
+---
+
+## Quick Start: Demo Login Credentials
+
+Use these credentials to test the application without any additional setup.
+
+### Admin Login
+
+| Field | Value |
+|---|---|
+| Email | `admin@dev.com` |
+| Password | `dev@admin` |
+
+### Author Login
+
+Every author from the provided demo dataset has the same default password:
+
+| Field | Value |
+|---|---|
+| Email | Any author email from the demo dataset (see the `users` table seeded by `bookleaf_database.sql`) |
+| Password | `Author@123` |
+
+> These credentials are for evaluation and demonstration only. Change or remove them before using the application in a real production environment.
+
+If you are running the project on a fresh database, follow [Database Setup and Scripts](#database-setup-and-scripts) first, otherwise the accounts above will not exist.
 
 ---
 
@@ -339,7 +371,7 @@ Use the [Environment Variables](#environment-variables) section below to configu
 
 Configure your PostgreSQL connection and Groq API key before starting the backend.
 
-Ensure that the required database schema and any required initial data have been applied to your database.
+Then apply the database schema and demo data, and create the login accounts, by following [Database Setup and Scripts](#database-setup-and-scripts) and [Login Credentials and Registration Steps](#login-credentials-and-registration-steps).
 
 ### 3. Set Up the Frontend
 
@@ -389,6 +421,8 @@ FRONTEND_URL=http://localhost:5173
 
 The exact variables required depend on the backend configuration. If the implementation uses additional environment variables, configure those as well.
 
+The helper scripts described below read `DATABASE_URL` from the same `.env` file, so the backend `.env` must be configured before running them.
+
 Do not commit your actual `.env` file or real credentials to GitHub.
 
 ### Frontend Environment Variables
@@ -412,6 +446,149 @@ Make sure the URL matches the API prefix used by the Axios configuration.
 If your Axios instance already appends `/api`, do not add that prefix twice.
 
 Vite exposes variables prefixed with `VITE_` to browser code. Never store database credentials, JWT secrets, or private API keys in frontend environment variables.
+
+---
+
+## Database Setup and Scripts
+
+The backend repository contains two folders that are required to get a working database with usable logins:
+
+```text
+backend/
+├── database_table_creation_scripts/
+│   └── bookleaf_database.sql
+└── scripts/
+    ├── createAdmin.js
+    └── setAuthorPasswords.js
+```
+
+### Step 1: Create the Tables and Insert the Demo Data
+
+The file `database_table_creation_scripts/bookleaf_database.sql` contains the SQL that creates all required tables and inserts the demo data provided with the assignment, including the authors, books, royalty information, and knowledge-base content.
+
+Run it against your PostgreSQL database, for example with `psql`:
+
+```bash
+psql "YOUR_DATABASE_URL" -f database_table_creation_scripts/bookleaf_database.sql
+```
+
+You can also open the file in a PostgreSQL client such as pgAdmin or DBeaver and execute it there.
+
+Creating an empty PostgreSQL database does not create the application tables. This step must be completed before anything else.
+
+### Step 2: Set the Default Password for All Demo Authors
+
+The demo dataset contains authors but no login passwords. The script `scripts/setAuthorPasswords.js` assigns the default password `Author@123` to every author from the demo data, stored as a secure hash.
+
+From the backend directory, run:
+
+```bash
+node scripts/setAuthorPasswords.js
+```
+
+After it completes, every author from the demo dataset can log in with their email and the password `Author@123`.
+
+### Step 3: Create an Administrator Account
+
+Administrators cannot self-register through the author interface, so an admin account must be created with the script `scripts/createAdmin.js`.
+
+The script takes three arguments in this order: full name, email, and password.
+
+```bash
+node scripts/createAdmin.js "Full Name" admin_email@example.com your_password
+```
+
+Example used to create the demo administrator:
+
+```bash
+node scripts/createAdmin.js "Dev" admin@dev.com dev@admin
+```
+
+Expected output:
+
+```text
+PostgreSQL client connected
+Admin created successfully:
+{
+  id: 'ddb0f64e-7a16-41e7-a708-518e429f9267',
+  full_name: 'Dev',
+  email: 'admin@dev.com',
+  role: 'admin'
+}
+```
+
+The generated `id` will be different on your own database.
+
+Run the command once for each additional administrator you want to create.
+
+---
+
+## Login Credentials and Registration Steps
+
+This section explains how to log in and how to register new administrators. Without it, a fresh installation has no usable accounts.
+
+### Demo Accounts
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@dev.com` | `dev@admin` |
+| Author (all demo authors) | Any author email from the demo dataset | `Author@123` |
+
+The demo admin account already exists on the deployed application, so you can log in with it directly at [https://book-leaf.netlify.app/](https://book-leaf.netlify.app/).
+
+### How to Log In as an Author
+
+1. Open the frontend application.
+2. Go to the login page.
+3. Enter the email address of any author from the demo dataset.
+4. Enter the password `Author@123`.
+5. Sign in to open the author dashboard.
+
+### How to Log In as an Administrator
+
+1. Open the frontend application.
+2. Go to the login page.
+3. Enter `admin@dev.com` as the email.
+4. Enter `dev@admin` as the password.
+5. Sign in to open the administrator dashboard.
+
+### How to Register a New Administrator
+
+New administrators are created from the backend using the helper script. This is the only supported way to add an admin account.
+
+1. Make sure the backend `.env` file contains a valid `DATABASE_URL` for the database you want to use.
+2. Make sure the database schema has already been applied (see [Database Setup and Scripts](#database-setup-and-scripts)).
+3. From the backend directory, run:
+
+```bash
+node scripts/createAdmin.js "Your Name" your_email@example.com your_password
+```
+
+4. Wait for the `Admin created successfully` message.
+5. Log in through the frontend with the email and password you just used.
+
+If the email already exists in the database, the script will not be able to create a duplicate account. Use a different email address.
+
+To create an administrator on the deployed application, point `DATABASE_URL` in your local `.env` to the Render PostgreSQL external connection URL and run the same command.
+
+### How to Reset Author Passwords
+
+If author passwords are changed or an author cannot log in, run the password script again:
+
+```bash
+node scripts/setAuthorPasswords.js
+```
+
+This restores the default password `Author@123` for the demo authors.
+
+### Credential Summary
+
+- Demo authors: password `Author@123`.
+- Demo admin: `admin@dev.com` with password `dev@admin`.
+- New admins: create them with `node scripts/createAdmin.js "Name" email password`.
+- Default author passwords: set with `node scripts/setAuthorPasswords.js`.
+
+> Security note: these shared demo credentials exist so that the assignment can be evaluated easily. In a real deployment, use strong unique passwords, remove the demo accounts, and never publish administrator credentials.
 
 ---
 
@@ -445,7 +622,7 @@ http://localhost:5173
 
 Open the displayed URL in your browser.
 
-Ensure that the backend is running, the database is accessible, and the frontend API URL is configured correctly.
+Ensure that the backend is running, the database is accessible, the database setup steps are complete, and the frontend API URL is configured correctly.
 
 ### Production Build
 
@@ -501,7 +678,7 @@ The application uses PostgreSQL hosted on Render.
 
 When the backend and database are in the same Render region, the internal database URL is recommended for backend-to-database communication.
 
-Use the external database URL for connections from outside Render when external access is required.
+Use the external database URL for connections from outside Render when external access is required, for example when running the helper scripts from your local machine against the deployed database.
 
 Keep database credentials in environment variables rather than source code.
 
@@ -571,9 +748,9 @@ The database schema includes the entities required by the application's workflow
 - Knowledge-base articles.
 - AI assessment and response-draft records.
 
-The exact table definitions and relationships are maintained in the database schema used by the backend.
+The table definitions and demo data are provided in `database_table_creation_scripts/bookleaf_database.sql`.
 
-Before running the application against a new database, ensure that the schema and any required initial data have been applied.
+Before running the application against a new database, apply this script, then run the helper scripts in the `scripts` folder as described in [Database Setup and Scripts](#database-setup-and-scripts).
 
 Do not assume that creating a PostgreSQL database automatically creates the application's tables.
 
@@ -590,6 +767,7 @@ Security-related responsibilities include:
 - Restricting authors to tickets they are permitted to access.
 - Validating requests before database operations.
 - Using parameterized SQL queries to reduce SQL injection risk.
+- Storing passwords as hashes rather than plain text.
 - Keeping API keys and database credentials on the backend.
 - Restricting cross-origin requests through CORS configuration.
 - Keeping administrator internal notes separate from public author-facing replies.
@@ -624,9 +802,45 @@ The frontend repository contains the React application, user interface component
 
 The backend repository contains the Express server, API routes, controllers, middleware, database connection and queries, authentication logic, and AI service integration.
 
+```text
+backend/
+├── config/
+│   └── db.js
+├── controllers/
+├── database_table_creation_scripts/
+│   └── bookleaf_database.sql
+├── middleware/
+│   ├── admin.middleware.js
+│   └── auth.middleware.js
+├── routes/
+├── scripts/
+│   ├── createAdmin.js
+│   └── setAuthorPasswords.js
+├── services/
+│   └── groq.service.js
+├── utils/
+│   └── pagination.js
+├── .env.example
+├── package.json
+└── server.js
+```
+
+| Folder / file | Purpose |
+|---|---|
+| `config/db.js` | PostgreSQL connection setup |
+| `controllers/` | Request handlers for authentication, tickets, messages, books, profile, dashboards, knowledge base, and AI |
+| `database_table_creation_scripts/` | SQL script that creates the tables and inserts the demo data |
+| `middleware/` | Authentication and administrator authorization middleware |
+| `routes/` | Express route definitions |
+| `scripts/createAdmin.js` | Creates an administrator account |
+| `scripts/setAuthorPasswords.js` | Sets the default password for every demo author |
+| `services/groq.service.js` | Groq API integration |
+| `utils/pagination.js` | Pagination helper |
+| `server.js` | Application entry point |
+
 Each repository has its own dependencies and configuration.
 
-Refer to each repository's `package.json` and source directories for the exact file structure.
+Refer to each repository's `package.json` and source directories for further details.
 
 ---
 
@@ -641,6 +855,7 @@ Potential future improvements include:
 - Improved real-time notification delivery.
 - Expanded AI evaluation and response-quality monitoring.
 - Additional accessibility and usability improvements.
+- A secure in-app flow for administrator registration and password management.
 
 These are potential enhancements rather than claims about currently implemented functionality.
 
