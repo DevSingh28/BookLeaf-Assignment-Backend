@@ -7,7 +7,7 @@ const COOKIE_NAME = "bookleaf_token";
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   path: "/",
 };
 
